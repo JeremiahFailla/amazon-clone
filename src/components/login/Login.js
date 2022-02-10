@@ -5,6 +5,8 @@ import { auth } from "./../../firebase/firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  setPersistence,
+  browserSessionPersistence,
 } from "firebase/auth";
 
 function Login() {
@@ -15,7 +17,10 @@ function Login() {
   const signIn = (e) => {
     e.preventDefault();
 
-    signInWithEmailAndPassword(auth, email, password)
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        return signInWithEmailAndPassword(auth, email, password);
+      })
       .then((authenticated) => {
         // if user is successful in logging in then navigate back to home page
         if (authenticated) {
@@ -26,7 +31,10 @@ function Login() {
   };
 
   const register = () => {
-    createUserWithEmailAndPassword(auth, email, password)
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        return createUserWithEmailAndPassword(auth, email, password);
+      })
       .then((authenticated) => {
         // if user is successful in creating account then navigate back to home page
         if (authenticated) {
