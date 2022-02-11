@@ -7,6 +7,8 @@ import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import CurrencyFormat from "react-currency-format";
 import { getBasketTotal } from "./../../reducer/reducer";
 import axios from "./../../axios/axios";
+import { db } from "./../../firebase/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 function Payment() {
   const [{ basket, user }, dispatch] = useStateValue();
@@ -23,12 +25,16 @@ function Payment() {
   useEffect(() => {
     // generate stripe secret which allows us to charge a customer
     const getClientSecret = async () => {
-      const response = await axios({
-        method: "post",
-        // stripe expects the total in a currencies subunits
-        url: `/payments/create?total=${getBasketTotal(basket) * 100}`,
-      });
-      setClientSecret(response.data.clientSecret);
+      try {
+        const response = await axios({
+          method: "post",
+          // stripe expects the total in a currencies subunits
+          url: `/payments/create?total=${getBasketTotal(basket) * 100}`,
+        });
+        setClientSecret(response.data.clientSecret);
+      } catch (error) {
+        console.log(error.message);
+      }
     };
     getClientSecret();
   }, [basket]);
@@ -45,11 +51,31 @@ function Payment() {
           card: elements.getElement(CardElement),
         },
       });
+      console.log(payload);
+
+      const userRef = doc(
+        db,
+        "users",
+        user?.uid,
+        "orders",
+        payload.paymentIntent.id
+      );
+      await setDoc(userRef, {
+        basket: basket,
+        amount: payload.paymentIntent.amount,
+        created: payload.paymentIntent.created,
+      });
+
       setSucceeded(true);
       setError(null);
       setProccessing(false);
+
+      dispatch({ type: "EMPTY_BASKET" });
+
       navigate("/orders", { replace: true });
-    } catch (error) {}
+    } catch (error) {
+      console.log(error.message);
+    }
   };
 
   const handleChange = (e) => {
